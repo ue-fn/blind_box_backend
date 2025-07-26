@@ -7,11 +7,20 @@ export interface CreateBlindBoxDTO {
   items: CreateBlindBoxItemDTO[];
 }
 
+export interface UpdateBlindBoxDTO extends CreateBlindBoxDTO {
+  id: number;
+}
+
 export interface CreateBlindBoxItemDTO {
   name: string;
   description: string;
   imageUrl: string;
   quantity: number;
+}
+
+export interface UpdateBlindBoxItemDTO extends CreateBlindBoxItemDTO {
+  id?: number;
+  boxId?: number;
 }
 
 export interface PurchaseBlindBoxDTO {

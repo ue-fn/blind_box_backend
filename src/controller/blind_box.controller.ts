@@ -1,7 +1,7 @@
-import { Controller, Post, Get, Body, Param, Inject } from '@midwayjs/core';
+import { Controller, Post, Get, Body, Param, Inject, Put } from '@midwayjs/core';
 import { BlindBoxService } from '../service/blind_box.service';
 import { ApiTags, ApiOperation, ApiBody } from '@midwayjs/swagger';
-import { CreateBlindBoxDTO, PurchaseBlindBoxDTO } from '../dto/blind_box.dto';
+import { CreateBlindBoxDTO, PurchaseBlindBoxDTO, UpdateBlindBoxDTO } from '../dto/blind_box.dto';
 
 @ApiTags('盲盒模块')
 @Controller('/blind-box')
@@ -44,6 +44,39 @@ export class BlindBoxController {
   @ApiOperation({ summary: '删除盲盒' })
   async deleteBlindBox(@Param('id') id: number) {
     return await this.blindBoxService.deleteBlindBox(id);
+  }
+
+  // 更新盲盒
+  @Put('/:id')
+  @ApiOperation({ summary: '更新盲盒' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', example: '神秘盲盒' },
+        description: { type: 'string', example: '包含多种精美款式的神秘盲盒' },
+        imageUrl: { type: 'string', example: 'https://example.com/box.jpg' },
+        stock: { type: 'number', example: 100 },
+        price: { type: 'number', example: 25.99 },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', example: '款式1' },
+              description: { type: 'string', example: '精美款式描述' },
+              imageUrl: { type: 'string', example: 'https://example.com/item1.jpg' },
+              quantity: { type: 'number', example: 10 },
+              id: { type: 'number', example: 1 }
+            }
+          }
+        }
+      }
+    }
+  })
+  async updateBlindBox(@Param('id') id: number, @Body() data: UpdateBlindBoxDTO) {
+    data.id = id; // 确保ID一致
+    return await this.blindBoxService.updateBlindBox(data);
   }
 
   

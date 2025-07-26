@@ -5,7 +5,7 @@ import { BlindBox } from '../entity/blind_box.entity';
 import { BlindBoxItem } from '../entity/blind_box_item.entity';
 import { UserOrder } from '../entity/user_order.entity';
 import { User } from '../entity/user.entity';
-import { CreateBlindBoxDTO, ApiResponse } from '../dto/blind_box.dto';
+import { CreateBlindBoxDTO, UpdateBlindBoxDTO, UpdateBlindBoxItemDTO, ApiResponse } from '../dto/blind_box.dto';
 
 @Provide()
 export class BlindBoxService {
@@ -205,6 +205,96 @@ export class BlindBoxService {
     } catch (error) {
       console.error('删除订单失败', error);
       return false;
+    }
+  }
+
+  // 更新盲盒
+  async updateBlindBox(data: UpdateBlindBoxDTO): Promise<ApiResponse<BlindBox>> {
+    try {
+      // 查找盲盒
+      const box = await this.blindBoxModel.findOne({
+        where: { id: data.id },
+        relations: ['items']
+      });
+
+      if (!box) {
+        return {
+          success: false,
+          message: '盲盒不存在'
+        };
+      }
+
+      // 更新盲盒基本信息
+      box.name = data.name;
+      box.description = data.description;
+      box.imageUrl = data.imageUrl;
+      box.stock = data.stock;
+      box.price = data.price;
+      await this.blindBoxModel.save(box);
+
+      // 获取现有款式的ID列表
+      const existingItemIds = box.items.map(item => item.id);
+      
+      // 处理款式更新
+      for (const itemData of data.items) {
+        const itemId = (itemData as UpdateBlindBoxItemDTO).id;
+        
+        if (itemId && existingItemIds.includes(itemId)) {
+          // 更新现有款式
+          const item = await this.blindBoxItemModel.findOne({ where: { id: itemId } });
+          if (item) {
+            item.name = itemData.name;
+            item.description = itemData.description;
+            item.imageUrl = itemData.imageUrl;
+            item.quantity = itemData.quantity;
+            // 保持总库存与盲盒库存的比例关系
+            item.totalQuantity = itemData.quantity * data.stock;
+            await this.blindBoxItemModel.save(item);
+          }
+        } else {
+          // 创建新款式
+          const newItem = this.blindBoxItemModel.create({
+            name: itemData.name,
+            description: itemData.description,
+            imageUrl: itemData.imageUrl,
+            quantity: itemData.quantity,
+            boxId: box.id,
+            totalQuantity: itemData.quantity * data.stock,
+          });
+          await this.blindBoxItemModel.save(newItem);
+        }
+      }
+
+      // 删除不再存在的款式
+      const updatedItemIds = data.items
+        .filter(item => (item as UpdateBlindBoxItemDTO).id)
+        .map(item => (item as UpdateBlindBoxItemDTO).id);
+      
+      const itemsToRemove = existingItemIds.filter(id => !updatedItemIds.includes(id));
+      
+      for (const itemId of itemsToRemove) {
+        // 检查该款式是否已被用户订单引用
+        const orderWithItem = await this.userOrderModel.findOne({
+          where: { item: { id: itemId } }
+        });
+        
+        if (!orderWithItem) {
+          // 如果没有订单引用该款式，则可以安全删除
+          await this.blindBoxItemModel.delete(itemId);
+        }
+      }
+
+      return {
+        success: true,
+        message: '盲盒更新成功',
+        data: box
+      };
+    } catch (error) {
+      console.error('更新盲盒失败', error);
+      return {
+        success: false,
+        message: `更新盲盒失败: ${error.message}`
+      };
     }
   }
 
