@@ -85,9 +85,9 @@ export class BlindBoxController {
       required: ['orderId']
     }
   })
-  async revealBlindBox(@Body() orderId: number) {
-    console.log('Reveal Blind Box:', orderId);
-    return await this.blindBoxService.revealBlindBox(orderId);
+  async revealBlindBox(@Body() body: { orderId: number }) {
+    console.log('Reveal Blind Box:', body.orderId);
+    return await this.blindBoxService.revealBlindBox(body.orderId);
   }
 
   // 获取用户订单

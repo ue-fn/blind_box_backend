@@ -1,5 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
 import { UserOrder } from './user_order.entity';
+import { Post } from './post.entity';
+import { Like } from './like.entity';
 
 @Entity('user')
 export class User {
@@ -44,7 +46,12 @@ export class User {
 
   @OneToMany(() => UserOrder, (order) => order.user)
   orders: UserOrder[];
+
+  @OneToMany(() => Post, (post) => post.author)
+  posts: Post[];
+
+  @OneToMany(() => Like, (like) => like.user)
+  likes: Like[];
 }
 
 export default User;
-// 这里导出 User 实体，方便在其他文件中用
