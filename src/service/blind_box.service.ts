@@ -203,8 +203,46 @@ export class BlindBoxService {
       const result = await this.userOrderModel.delete({ id: orderId });
       return result.affected === 1;
     } catch (error) {
-      console.error('删除用户失败', error);
+      console.error('删除订单失败', error);
       return false;
+    }
+  }
+
+  // 删除盲盒
+  async deleteBlindBox(id: number) {
+    try {
+      // 查找盲盒
+      const box = await this.blindBoxModel.findOne({
+        where: { id },
+        relations: ['items', 'orders']
+      });
+
+      if (!box) {
+        return {
+          success: false,
+          message: '盲盒不存在'
+        };
+      }
+
+      // 先删除与该盲盒相关的所有订单
+      await this.userOrderModel.delete({ box: { id } });
+
+      // 再删除与该盲盒相关的所有款式
+      await this.blindBoxItemModel.delete({ box: { id } });
+
+      // 最后删除盲盒本身
+      await this.blindBoxModel.remove(box);
+
+      return {
+        success: true,
+        message: '盲盒删除成功'
+      };
+    } catch (error) {
+      console.error('删除盲盒失败', error);
+      return {
+        success: false,
+        message: `删除盲盒失败: ${error.message}`
+      };
     }
   }
 }

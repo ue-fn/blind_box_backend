@@ -21,7 +21,5 @@ export class PostResponse {
 }
 
 export interface PostListQuery {
-  page?: number;
-  pageSize?: number;
   userId?: number;
 }

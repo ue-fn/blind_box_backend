@@ -10,7 +10,7 @@ export class BlindBoxController {
   blindBoxService: BlindBoxService;
 
   // 创建盲盒
-  @Post('/create')
+  @Post('/')
   @ApiOperation({ summary: '创建盲盒' })
   @ApiBody({
     schema: {
@@ -39,6 +39,15 @@ export class BlindBoxController {
   async createBlindBox(@Body() data: CreateBlindBoxDTO) {
     return await this.blindBoxService.createBlindBox(data);
   }
+
+  @Post('/delete/:id')
+  @ApiOperation({ summary: '删除盲盒' })
+  async deleteBlindBox(@Param('id') id: number) {
+    return await this.blindBoxService.deleteBlindBox(id);
+  }
+
+  
+  
 
   // 获取所有盲盒
   @Get('/all')

@@ -34,23 +34,21 @@ export class PostService {
   }
 
   async getPosts(query: PostListQuery) {
-    const { page = 1, pageSize = 10, userId } = query;
+    const { userId } = query;
     const queryBuilder = this.postModel
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
-      .orderBy('post.createdAt', 'DESC')
-      .skip((page - 1) * pageSize)
-      .take(pageSize);
+      .orderBy('post.createdAt', 'DESC');
 
     if (userId) {
       queryBuilder.where('author.id = :userId', { userId });
     }
 
-    const [posts, total] = await queryBuilder.getManyAndCount();
+    const posts = await queryBuilder.getMany();
     return {
       success: true,
       message: '获取成功',
-      data: { posts, total, page, pageSize },
+      data: { posts },
     };
   }
 
@@ -87,7 +85,7 @@ export class PostService {
 
     // 先删除与该帖子相关的所有点赞记录
     await this.likeModel.delete({ post: { id } });
-    
+
     // 然后删除帖子
     await this.postModel.remove(post);
     return { success: true, message: '删除成功' };
