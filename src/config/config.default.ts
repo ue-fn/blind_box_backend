@@ -48,10 +48,10 @@ export default {
     whitelist: ['.jpg', '.jpeg', '.png', '.gif'],
     // 上传目录
     tmpdir: join(__dirname, '../../public/uploads'),
-    // 上传的文件模式
-    cleanTimeout: 5 * 60 * 1000, // 5 minutes
+    // 禁用自动清理临时文件，确保上传的文件被永久保存
+    cleanTimeout: 0, // 设置为0表示不清理
   },
-  
+
   // 静态文件服务
   staticFile: {
     prefix: '/public',

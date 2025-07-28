@@ -3,7 +3,7 @@ import { InjectEntityModel } from '@midwayjs/typeorm';
 import { Repository } from 'typeorm';
 import { BlindBox } from '../entity/blind_box.entity';
 import { BlindBoxItem } from '../entity/blind_box_item.entity';
-import { UserOrder } from '../entity/user_order.entity';
+import { UserOrder, OrderStatus } from '../entity/user_order.entity';
 import { User } from '../entity/user.entity';
 import { CreateBlindBoxDTO, UpdateBlindBoxDTO, UpdateBlindBoxItemDTO, ApiResponse } from '../dto/blind_box.dto';
 
@@ -127,6 +127,7 @@ export class BlindBoxService {
       box,
       item: selectedItem,
       isRevealed: false,
+      status: OrderStatus.PENDING_SHIPMENT, // 设置订单状态为未发货
     });
     await this.userOrderModel.save(order);
 
@@ -188,12 +189,34 @@ export class BlindBoxService {
   async getUserOrders(userId: number) {
     const orders = await this.userOrderModel.find({
       where: { user: { id: userId } },
-      relations: ['box', 'item'],
+      relations: ['box', 'item', 'user'],
       order: { purchaseTime: 'DESC' }
     });
     return {
       success: true,
       message: '获取用户订单成功',
+      data: orders
+    };
+  }
+  
+  // 获取所有订单
+  async getAllOrders(status?: number) {
+    let whereCondition = {};
+    
+    // 如果提供了状态参数，则按状态筛选
+    if (status !== undefined) {
+      whereCondition = { status };
+    }
+    
+    const orders = await this.userOrderModel.find({
+      where: whereCondition,
+      relations: ['box', 'item', 'user'],
+      order: { purchaseTime: 'DESC' }
+    });
+    
+    return {
+      success: true,
+      message: '获取订单成功',
       data: orders
     };
   }
@@ -205,6 +228,39 @@ export class BlindBoxService {
     } catch (error) {
       console.error('删除订单失败', error);
       return false;
+    }
+  }
+
+  // 更新订单状态
+  public async updateOrderStatus(orderId: number, status: OrderStatus): Promise<ApiResponse<UserOrder>> {
+    try {
+      const order = await this.userOrderModel.findOne({
+        where: { id: orderId },
+        relations: ['box', 'item', 'user']
+      });
+
+      if (!order) {
+        return {
+          success: false,
+          message: '订单不存在'
+        };
+      }
+
+      // 更新订单状态
+      order.status = status;
+      await this.userOrderModel.save(order);
+
+      return {
+        success: true,
+        message: '订单状态更新成功',
+        data: order
+      };
+    } catch (error) {
+      console.error('更新订单状态失败', error);
+      return {
+        success: false,
+        message: `更新订单状态失败: ${error.message}`
+      };
     }
   }
 
@@ -332,6 +388,44 @@ export class BlindBoxService {
       return {
         success: false,
         message: `删除盲盒失败: ${error.message}`
+      };
+    }
+  }
+
+  // 获取热销榜
+  async getBestSellers() {
+    try {
+      // 查询所有盲盒及其订单数量
+      const result = await this.blindBoxModel
+        .createQueryBuilder('box')
+        .leftJoin('box.orders', 'order')
+        .select(['box.id', 'box.name', 'box.imageUrl', 'box.price'])
+        .addSelect('COUNT(order.id)', 'salesCount')
+        .groupBy('box.id')
+        .orderBy('salesCount', 'DESC')
+        .limit(10)
+        .getRawMany();
+
+      // 格式化结果
+      const bestSellers = result.map((item, index) => ({
+        rank: index + 1,
+        id: item.box_id,
+        name: item.box_name,
+        imageUrl: item.box_imageUrl,
+        price: item.box_price,
+        salesCount: parseInt(item.salesCount)
+      }));
+
+      return {
+        success: true,
+        message: '获取热销榜成功',
+        data: bestSellers
+      };
+    } catch (error) {
+      console.error('获取热销榜失败', error);
+      return {
+        success: false,
+        message: `获取热销榜失败: ${error.message}`
       };
     }
   }

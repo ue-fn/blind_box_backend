@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, Param, Inject, Put } from '@midwayjs/core';
+import { Controller, Post, Get, Body, Param, Inject, Put, Query } from '@midwayjs/core';
 import { BlindBoxService } from '../service/blind_box.service';
 import { ApiTags, ApiOperation, ApiBody } from '@midwayjs/swagger';
-import { CreateBlindBoxDTO, PurchaseBlindBoxDTO, UpdateBlindBoxDTO } from '../dto/blind_box.dto';
+import { CreateBlindBoxDTO, PurchaseBlindBoxDTO, UpdateBlindBoxDTO, UpdateOrderStatusDTO } from '../dto/blind_box.dto';
+import { OrderStatus } from '../entity/user_order.entity';
 
 @ApiTags('盲盒模块')
 @Controller('/blind-box')
@@ -79,8 +80,8 @@ export class BlindBoxController {
     return await this.blindBoxService.updateBlindBox(data);
   }
 
-  
-  
+
+
 
   // 获取所有盲盒
   @Get('/all')
@@ -155,6 +156,68 @@ export class BlindBoxController {
           message: '订单不存在或删除失败'
         };
       }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  // 更新订单状态
+  @Post('/updateOrderStatus')
+  @ApiOperation({ summary: '更新订单状态' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        orderId: { type: 'number', example: 1 },
+        status: { type: 'number', example: 1, description: '订单状态：0-未发货，1-待收货，2-已完成' }
+      },
+      required: ['orderId', 'status']
+    }
+  })
+  async updateOrderStatus(@Body() data: UpdateOrderStatusDTO) {
+    try {
+      // 验证状态值是否有效
+      if (data.status !== OrderStatus.PENDING_SHIPMENT &&
+        data.status !== OrderStatus.PENDING_RECEIPT &&
+        data.status !== OrderStatus.COMPLETED) {
+        return {
+          success: false,
+          message: '无效的订单状态'
+        };
+      }
+
+      return await this.blindBoxService.updateOrderStatus(data.orderId, data.status);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  // 获取所有订单
+  @Get('/all-orders')
+  @ApiOperation({ summary: '获取所有订单（管理员接口）' })
+  async getAllOrders(@Query('status') status?: number) {
+    try {
+      return await this.blindBoxService.getAllOrders(status);
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+  }
+
+  // 获取热销榜
+  @Get('/best-sellers')
+  @ApiOperation({ summary: '获取热销榜' })
+  async getBestSellers() {
+    try {
+      return await this.blindBoxService.getBestSellers();
     } catch (error) {
       return {
         success: false,
