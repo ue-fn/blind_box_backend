@@ -47,6 +47,16 @@ export class UserController {
                 registerData.password,
                 registerData.avatar
             );
+            
+            // 如果返回false，表示用户名已存在
+            if (user === false) {
+                return {
+                    success: false,
+                    data: false,
+                    message: '用户名已存在'
+                };
+            }
+            
             return {
                 success: true,
                 data: user,
