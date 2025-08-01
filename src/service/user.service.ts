@@ -77,10 +77,78 @@ export class UserService {
       return null;
     }
   }
+
+  public async getAllUsers(): Promise<User[]> {
+    try {
+      // 查询所有用户，按创建时间降序排列
+      const users = await this.userModel.find({
+        select: ['id', 'username', 'avatar', 'createdAt', 'updatedAt'],
+        order: { createdAt: 'DESC' }
+      });
+      return users;
+    } catch (error) {
+      console.error('获取所有用户失败', error);
+      return [];
+    }
+  }
   public async deleteUserByUsername(username: string): Promise<boolean> {
     try {
-      const result = await this.userModel.delete({ username });
-      return result.affected === 1;
+      // 查找用户
+      const user = await this.userModel.findOne({
+        where: { username },
+        relations: ['orders', 'posts', 'likes']
+      });
+
+      if (!user) {
+        console.log('用户不存在');
+        return false;
+      }
+
+      // 管理员账号不允许删除
+      if (user.id === 11) {
+        console.log('管理员账号不允许删除');
+        return false;
+      }
+
+      // 使用事务确保数据一致性
+      const queryRunner = this.userModel.manager.connection.createQueryRunner();
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        // 删除用户的点赞
+        if (user.likes && user.likes.length > 0) {
+          await queryRunner.manager.delete('like', { user: user.id });
+        }
+
+        // 删除用户的帖子和帖子相关的点赞
+        if (user.posts && user.posts.length > 0) {
+          for (const post of user.posts) {
+            await queryRunner.manager.delete('like', { post: post.id });
+          }
+          await queryRunner.manager.delete('post', { author: user.id });
+        }
+
+        // 删除用户的订单
+        if (user.orders && user.orders.length > 0) {
+          await queryRunner.manager.delete('user_order', { user: user.id });
+        }
+
+        // 最后删除用户
+        await queryRunner.manager.delete('user', { id: user.id });
+
+        // 提交事务
+        await queryRunner.commitTransaction();
+        return true;
+      } catch (error) {
+        // 回滚事务
+        await queryRunner.rollbackTransaction();
+        console.error('删除用户事务失败', error);
+        return false;
+      } finally {
+        // 释放查询运行器
+        await queryRunner.release();
+      }
     } catch (error) {
       console.error('删除用户失败', error);
       return false;

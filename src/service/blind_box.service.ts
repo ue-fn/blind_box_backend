@@ -395,12 +395,13 @@ export class BlindBoxService {
   // 获取热销榜
   async getBestSellers() {
     try {
-      // 查询所有盲盒及其订单数量
+      // 查询所有盲盒及其订单数量，过滤掉库存为0的商品
       const result = await this.blindBoxModel
         .createQueryBuilder('box')
         .leftJoin('box.orders', 'order')
-        .select(['box.id', 'box.name', 'box.imageUrl', 'box.price'])
+        .select(['box.id', 'box.name', 'box.imageUrl', 'box.price', 'box.stock'])
         .addSelect('COUNT(order.id)', 'salesCount')
+        .where('box.stock > 0') // 只显示有库存的商品
         .groupBy('box.id')
         .orderBy('salesCount', 'DESC')
         .limit(10)
@@ -413,6 +414,7 @@ export class BlindBoxService {
         name: item.box_name,
         imageUrl: item.box_imageUrl,
         price: item.box_price,
+        stock: item.box_stock,
         salesCount: parseInt(item.salesCount)
       }));
 

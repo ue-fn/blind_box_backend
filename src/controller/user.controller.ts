@@ -128,7 +128,26 @@ export class UserController {
         }
     }
 
+    @Get('/all')
+    @ApiOperation({ summary: '获取所有用户' })
+    async getAllUsers(): Promise<any> {
+        try {
+            const users = await this.userService.getAllUsers();
+            return {
+                success: true,
+                data: users,
+                message: '获取用户列表成功'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error.message
+            };
+        }
+    }
+
     @Get('/delete')
+    @ApiOperation({ summary: '删除用户' })
     async deleteUser(@Query('username') username: string): Promise<any> {
         try {
             const result = await this.userService.deleteUserByUsername(username);
